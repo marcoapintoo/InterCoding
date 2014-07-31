@@ -227,42 +227,50 @@ class FieldToConstructor {
 
 @CompileStatic
 class AvoidExpressionAssignments {
+    static def <T extends Serializable> T clone(T object){
+        (T)org.apache.commons.lang3.SerializationUtils.clone(object)
+    }
     private StatementModel adaptAssignment(StatementModel parent, AssignmentModel assignmentModel){
-        def left = (StatementModel) assignmentModel.left.clone()
+        def left = clone((StatementModel) assignmentModel.left)
+        def assignAccessor = assignmentModel.accessor
         def accessor = parent.accessor
+        StatementModel block = null
         if(accessor instanceof CollectionPropertyModelAccesor){
             def collectionAccessor = accessor as CollectionPropertyModelAccesor
             collectionAccessor.provider.add(collectionAccessor.index, assignmentModel)
         }else{
-            def block =new BlockModel(
+            block=new BlockModel(
                     newScope: false
             )
             block.setStatements([assignmentModel, parent])
             accessor.value=block
         }
-        assignmentModel.accessor.value = left
-        return parent
+        assignAccessor.value = left
+        return block
     }
+
     private StatementModel adaptPreAssignment(WhileModel parent, AssignmentModel assignmentModel){
+        def parentAccessor = parent.accessor
         def block = new BlockModel(
                 newScope: false
         )
         block.setStatements([assignmentModel, parent])
-        parent.accessor.value = block
+        parentAccessor.value = block
         return block
     }
+
     private StatementModel adaptWhile(WhileModel parent, AssignmentModel assignmentModel){
-        def left = (StatementModel) assignmentModel.left.clone()
+        def left = clone((StatementModel) assignmentModel.left)
         assignmentModel.accessor.value = left
         if(parent.action instanceof EmptyModel){
-            parent.action=(StatementModel) assignmentModel.clone()
+            parent.action=clone((StatementModel) assignmentModel)
         }else if(parent.action instanceof BlockModel){
-            (parent.action as BlockModel).statements.add((StatementModel) assignmentModel.clone())
+            (parent.action as BlockModel).statements.add(clone((StatementModel) assignmentModel))
         }else{
             def block = new BlockModel(
                     newScope: true
             )
-            block.setStatements([parent.action, (StatementModel) assignmentModel.clone()],)
+            block.setStatements([parent.action, clone((StatementModel) assignmentModel)],)
             parent.action = block
         }
         return parent
@@ -454,9 +462,10 @@ class PythonCodeProcessing extends DefaultModelVisitor<ProcessingInfo, Void> {
         if(node.accessor?.owner instanceof ExpressionModel){
             def processor = new AvoidExpressionAssignments()
             def converted = processor.convert(node)
-            if(converted!=null){
+            /*if(converted!=node){
                 return super.visit(converted, argument)
-            }
+            }*/
+            return null
         }
         return super.visit(node, argument)
     }

@@ -30,6 +30,9 @@ class PythonFormatOption {
     def indent(content) {
         tabCharacter + (content ?: "").trim().replace("\n", "\n" + tabCharacter)
     }
+    def unindent(content) {
+        (content ?: "").trim().replace("\n" + tabCharacter, "\n").replaceFirst(tabCharacter, "")
+    }
 }
 
 @Log4j2
@@ -325,9 +328,12 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
     String visit(DoModel node, PythonFormatOption argument) {
         def formatted
         def condition = node.condition?.accept(this, argument)
+        def actions = indent(argument, node.action)
         //def action = node.action?.accept(this, argument)
-        formatted = "while ${condition}:\n"
-        formatted += indent(argument, node.action)
+        formatted = argument.unindent(actions)+"\n"
+        formatted += "while ${condition}:\n"
+        //formatted += indent(argument, node.action)
+        formatted += actions
         return formatted
     }
 /*
