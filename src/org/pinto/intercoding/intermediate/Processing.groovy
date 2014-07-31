@@ -24,6 +24,7 @@ package org.pinto.intercoding.intermediate
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log4j2
+import sun.org.mozilla.javascript.ast.Block
 
 class ProcessingInfo {
     //Iterator<? extends GenericModel> iterator
@@ -225,6 +226,76 @@ class FieldToConstructor {
 }
 
 @CompileStatic
+class AvoidExpressionAssignments {
+    private StatementModel adaptAssignment(StatementModel parent, AssignmentModel assignmentModel){
+        def left = (StatementModel) assignmentModel.left.clone()
+        def accessor = parent.accessor
+        if(accessor instanceof CollectionPropertyModelAccesor){
+            def collectionAccessor = accessor as CollectionPropertyModelAccesor
+            collectionAccessor.provider.add(collectionAccessor.index, assignmentModel)
+        }else{
+            def block =new BlockModel(
+                    newScope: false
+            )
+            block.setStatements([assignmentModel, parent])
+            accessor.value=block
+        }
+        assignmentModel.accessor.value = left
+        return parent
+    }
+    private StatementModel adaptPreAssignment(WhileModel parent, AssignmentModel assignmentModel){
+        def block = new BlockModel(
+                newScope: false
+        )
+        block.setStatements([assignmentModel, parent])
+        parent.accessor.value = block
+        return block
+    }
+    private StatementModel adaptWhile(WhileModel parent, AssignmentModel assignmentModel){
+        def left = (StatementModel) assignmentModel.left.clone()
+        assignmentModel.accessor.value = left
+        if(parent.action instanceof EmptyModel){
+            parent.action=(StatementModel) assignmentModel.clone()
+        }else if(parent.action instanceof BlockModel){
+            (parent.action as BlockModel).statements.add((StatementModel) assignmentModel.clone())
+        }else{
+            def block = new BlockModel(
+                    newScope: true
+            )
+            block.setStatements([parent.action, (StatementModel) assignmentModel.clone()],)
+            parent.action = block
+        }
+        return parent
+    }
+    StatementModel convert(AssignmentModel assignmentModel) {
+        StatementModel parent = PrePostfixConversion.findStatementParent(assignmentModel)[0]
+        StatementModel subparent = PrePostfixConversion.findStatementParent(assignmentModel)[1]
+        if (parent == assignmentModel.accessor.owner) {
+            //It's a direct child
+            return assignmentModel
+        }
+        //TODO: Finish
+        if(subparent instanceof ExpressionModel){
+            if(parent instanceof ForModel){
+                println "unknown for"
+            }else if(parent instanceof DoModel){
+                return adaptWhile(parent, assignmentModel)
+            }else if(parent instanceof WhileModel){
+                adaptWhile(parent, assignmentModel)
+                return adaptPreAssignment(parent, assignmentModel)
+            }else if(parent instanceof IfModel){
+                return adaptAssignment(parent, assignmentModel)
+            }else if(parent instanceof BlockModel){
+                return adaptAssignment(parent, assignmentModel)
+            }else{
+                println "unknown " + parent.class.toString()
+                return assignmentModel
+            }
+        }
+        return assignmentModel
+    }
+}
+@CompileStatic
 class PrePostfixConversion {
     private static int varCounter = 0
 
@@ -233,7 +304,7 @@ class PrePostfixConversion {
         "inc${varCounter}"
     }
 
-    List<StatementModel> findStatementParent(ExpressionModel model) {
+    static List<StatementModel> findStatementParent(ExpressionModel model) {
         def isStatement = { BaseModel m -> m instanceof StatementModel && !(m instanceof ExpressionModel) }
         def parent = model.accessor.owner
         def lastParent = parent
@@ -377,8 +448,16 @@ class PythonCodeProcessing extends DefaultModelVisitor<ProcessingInfo, Void> {
         return super.visit(node, argument)
     }
 
+
     @Override
     Void visit(AssignmentModel node, ProcessingInfo argument) {
+        if(node.accessor?.owner instanceof ExpressionModel){
+            def processor = new AvoidExpressionAssignments()
+            def converted = processor.convert(node)
+            if(converted!=null){
+                return super.visit(converted, argument)
+            }
+        }
         return super.visit(node, argument)
     }
 
@@ -983,5 +1062,6 @@ class TypeFieldNameResolution extends DefaultModelVisitor<ProcessingInfo, Void> 
         }
         return super.visit(node, argument)
     }
+
 }
 
