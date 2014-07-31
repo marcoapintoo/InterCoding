@@ -10,9 +10,18 @@ function runtest(){
 	output_object=output.object
 	command="java -jar ../out/artifacts/InterCoding_jar/InterCoding.jar -d $output_dir -o $output_object BaseTypes.java"
 	echo =============================================================================
-	echo Running Test $filename
-	echo =============================================================================
+	echo RUNNING TEST FILE $filename
 	$command $filename
+	echo =============================================================================
+	echo -n "TESTING SYNTAX RESULTING CODE ......................................   "
+	dirpath=$(cat $filename | grep -oE "^package [^;]*" | sed "s#package ##g" | sed "s#\.#/#g")
+	pycompile "$output_dir/$dirpath" 2> /tmp/aaaa1
+	result=$(cat /tmp/aaaa1)
+	rm /tmp/aaaa1
+	#if [ -z "$result" ]; then echo "OK"; else echo "BAD :("; echo -e $result; fi;
+	if [ -z "$result" ]; then echo "OK"; else echo "BAD :("; pycompile "$output_dir/$dirpath"; fi;
+	echo =============================================================================
+	echo; echo;
 }
 runtest Test01.java
 runtest Test02.java
@@ -22,7 +31,7 @@ runtest Test05.java
 runtest Test06.java
 runtest Test07.java
 runtest Test08.java
-#runtest Test09.java
+runtest Test09.java
 #runtest Test10.java
 #runtest Test11.java
 #runtest Test12.java
