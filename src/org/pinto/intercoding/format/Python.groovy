@@ -359,22 +359,13 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
                 useValues: true
         ).format()
         node.values?.each {
-            //EnumField it;
-            /*def fieldName = it.name
-            def className = node.name
-            if(it.anonymous){
-                className = anonymousClassName
-                formatter += it.anonymousType.accept(this, argument)
-                formatter += "\n"
-            }*/
             def enumReference = new TypeReferenceModel(
                     typeName: node.name,
                     arrayDimensions: 0
             )
             def objectInvocation = new ObjectCreationModel(
                     type: it.type != null ? it.type : enumReference,
-                    arguments: it.arguments/*,
-                    anonymousType: it.anonymous ? it.anonymousType : null,*/
+                    arguments: it.arguments
             )
             def varInit = new AssignmentModel(
                     left: new FieldAccessModel(
@@ -387,7 +378,6 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
             )
             formatted += varInit.accept(this, argument)
             formatted += "\n"
-//                    formatted += "${fieldName} = ${className}"
         }
         return formatted
     }
@@ -397,9 +387,10 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
         def formatted
         //TODO: Flags ignored
         def name = node.name
-        def args = node.arguments?.collect { it?.accept(this, argument) } ?: []
-        args = args.join(", ")
+        //def args = node.arguments?.collect { it?.accept(this, argument) } ?: []
+        //args = args.join(", ")
         formatted = "${name} = None"
+        //formatted = "${name} = ${args}"
         return formatted
     }
 /*
@@ -558,7 +549,7 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
         def value
         if (node.value instanceof BaseModel) {
             value = (node.value as BaseModel)?.accept(this, argument)
-        } else if(node.value instanceof String && (node.value as String).isNumber()) {
+        } else if(node.value instanceof String){
             String val = node.value as String
             if (val.isBigDecimal()) {
                 value = val.toBigDecimal().toString()
@@ -575,9 +566,11 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
             }else{
                 value = val
             }
+            //println node.value.toString() + " <---> " + value.toString()
         }else {
             value = (node.value ?: "None").toString()
         }
+        //println node.value.toString() + "(" + node.value.class.toString() + ") <---> " + value.toString()
         def formatted = "${value}"
         return formatted
     }
@@ -617,14 +610,21 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
     String visit(MethodCallModel node, PythonFormatOption argument) {
         def formatted
         def expression = node.expression?.accept(this, argument) ?: "self"
-        expression = expression == "None" ? "self" : expression
-        def arguments = applyAndJoin node.arguments, argument
+        expression = expression == "None" ? "self" : expression //Duck patching
+        def nodeArguments = node.arguments.toList()
+        if(node.expression instanceof SuperThisModel){
+            expression = node.elementOwner?.typeOwner?.parents.find {it.type instanceof ClassModel}?.typeName?:"object"
+            nodeArguments.add(0, new ThisModel())
+        }else if(!(node.expression instanceof FieldAccessModel)&&!(node.expression instanceof NameModel)&&!(node.expression instanceof ThisModel) ){
+            expression = "(" + expression + ")"
+        }
+        def arguments = applyAndJoin nodeArguments, argument
         //node.genericArguments
         def methodName = node.methodName
         if (methodName == MethodModel.ConstructorName) {
             methodName = "__init__"
         }
-        formatted = "(${expression}).${methodName}(${arguments})"
+        formatted = "${expression}.${methodName}(${arguments})"
         return formatted
     }
 
@@ -711,6 +711,10 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
     String visit(SuperThisModel node, PythonFormatOption argument) {
         //TODO: Namespaces are not supported
         //TODO: Support super keyword
+        /*TypeModel classModel = node.elementOwner?.typeOwner
+        TypeModel parentModel = node.elementOwner?.typeOwner?.parents.find {it.type instanceof ClassModel}
+        def thisclass = node.elementOwner?.typeOwner?.name?: "object"
+        */
         def formatted = "super"
         return formatted
     }

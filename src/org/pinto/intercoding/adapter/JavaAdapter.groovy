@@ -41,6 +41,7 @@ class JavaAdapterInfo {
     Stack<TypeModel> workingTypes = new Stack<TypeModel>()
     def coreNamespace = new NamespaceModel()
     def _workingNamespace = null
+    List<TypeModel> currentTypes = []
 
     TypeModel getWorkingType() { workingTypes.peek() }
 
@@ -127,11 +128,15 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
             ))
         }
         imports.addAll(n.imports?.collect { (ImportModel) it.accept(this, arg) } ?: [])
-        types.addAll(n.types?.collect { (TypeModel) it.accept(this, arg) } ?: [])
+        n.types?.collect { (TypeModel) it.accept(this, arg) }
+        //!types.addAll(n.types?.collect { (TypeModel) it.accept(this, arg) } ?: [])
         //BUG:!!!types = types.findAll {it!=null && it instanceof Type} //Duckpatching
-        types.remove(null)
-        types.each { it?.imports?.addAll(imports) } // it can be null if associated type was an annotation
-        arg.workingNamespace.types.addAll(types)
+        arg.currentTypes.remove(null)
+        //!types.remove(null)
+        //types.each { it?.imports?.addAll(imports) } // it can be null if associated type was an annotation
+        arg.currentTypes.each { it?.imports?.addAll(imports) } // it can be null if associated type was an annotation
+        arg.workingNamespace.types.addAll(arg.currentTypes)
+        arg.currentTypes.clear()
     }
 
     @Override
@@ -337,14 +342,13 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
             arg.workingType.innerTypes.add(type)
         }
         arg.workingTypes.push(type)
+        arg.currentTypes.add(type)
+        //arg.workingNamespace.types.add(type)
         //type.elements = n.members?.collect { it.accept(this, arg) } ?: []
         type.setElements([])
         n.members?.each { it.accept(this, arg) }
         type.genericParameters = n.typeParameters?.collect { (GenericParameterModel) it.accept(this, arg) } ?: []
         type.parents = createParentReferences(arg, [n.extends, n.implements])
-        if(type.name=="Object" ){
-            println arg.workingNamespace.fullname
-        }
         if(type.name=="Object" && arg.workingNamespace.fullname=="java.lang"){
             type.parents = type.parents.size()==1?[]:type.parents[0..-2]
         }
@@ -441,12 +445,26 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
     Object visit(EnumConstantDeclaration n, JavaAdapterInfo arg) {
         ClassOrInterfaceType enumType = new ClassOrInterfaceType()
         enumType.name = arg.workingType.name
-        new EnumFieldModel(
+        /*new EnumFieldModel(
                 name: n.name,
                 arguments: n.args?.collect { (ExpressionModel) it.accept(this, arg) } ?: [],
                 documentation: (CommentModel) n.comment?.accept(this, arg),
-                type: (n.classBody == null) ? null : getTypeOrAnonymousType(enumType, n.classBody, arg)
+                //type: (n.classBody == null) ? null : getTypeOrAnonymousType(enumType, n.classBody, arg)
+                type: (n.classBody == null) ? new TypeReferenceModel(typeName: arg.workingType.name) : getTypeOrAnonymousType(enumType, n.classBody, arg)
+        )*/
+        //POTENTIAL BUGS FOR THIS:
+        def type = (n.classBody == null) ? new TypeReferenceModel(typeName: arg.workingType.name) : getTypeOrAnonymousType(enumType, n.classBody, arg)
+        def value = new FieldModel(
+                name: n.name,
+                type: type,
+                flags: EnumSet.of(ModelFlag.Public, ModelFlag.Static),
+                documentation: (CommentModel) n.comment?.accept(this, arg),
+                defaultValue: new ObjectCreationModel(
+                        type: type,
+                        arguments: n.args?:[]
+                )
         )
+        arg.workingType.elements.add(value)
     }
 
     @Override
@@ -458,9 +476,12 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
             arg.workingType.innerTypes.add(type)
         }
         arg.workingTypes.push(type)
+        arg.currentTypes.add(type)
+        //arg.workingNamespace.types.add(type)
         //type.elements= n.members?.collect { it.accept(this, arg) }//?:[]
         n.members?.each { it.accept(this, arg) }//?:[]
-        type.values = n.entries?.collect { (EnumFieldModel) it.accept(this, arg) } ?: []
+        //type.values = n.entries?.collect { (EnumFieldModel) it.accept(this, arg) } ?: []
+        n.entries?.collect { it.accept(this, arg) } ?: []
         type.documentation = (CommentModel) n.comment?.accept(this, arg)
         type.parents = createParentReferences(arg, [n.implements])
         type.flags = convertModifier(n.modifiers)
@@ -704,6 +725,7 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
             )
             anonymousClass.typeOwner = arg.workingType
             arg.workingTypes.push(anonymousClass)
+            arg.currentTypes.add(anonymousClass)
             //anonymousClass.elements= anonymousClassBody?.collect { it.accept(this, arg) }?:[]
             anonymousClassBody?.each { it.accept(this, arg) } ?: []
             arg.workingNamespace.types.add(anonymousClass)

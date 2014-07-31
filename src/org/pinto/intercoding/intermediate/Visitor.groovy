@@ -1071,6 +1071,7 @@ class DefaultModelVisitor<T, R> implements ModelVisitor<T, R> {
     @Override
     R visit(MethodParameterModel node, T argument) {
         node.defaultValue?.accept(this, argument)
+        node.type?.accept(this, argument)
         return defaultVisit(node, argument)
     }
 

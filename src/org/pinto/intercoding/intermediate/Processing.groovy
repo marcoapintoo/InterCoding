@@ -762,11 +762,11 @@ class TypeFieldNameResolution extends DefaultModelVisitor<ProcessingInfo, Void> 
                     importedTypes.put(type.name, type)
                 }
             } else {
-                def type = imprt.namespace.findType(imprt.name, false)
+                def type = imprt.namespace?.findType(imprt.name, false)
                 if (type != null) {
                     importedTypes.put(type.name, type)
                 } else {
-                    log.error "Type is not available: " + imprt.namespace.fullname + "." + imprt.name
+                    log.error "Type is not available: " + imprt.namespace?.fullname?:"" + "." + imprt.name
                 }
             }
         }
@@ -978,12 +978,8 @@ class TypeFieldNameResolution extends DefaultModelVisitor<ProcessingInfo, Void> 
         node.type = getType(currentType, node.typeName)
         if (node.type == null) {
             log.error "Type reference is not available: " + node.typeName
-            if (node.typeName == "java.lang.Character") {
-                int i = 0
-                i++
-            }
             argument.modifications++
-            getType(currentType, node.typeName)
+            //getType(currentType, node.typeName)
         }
         return super.visit(node, argument)
     }

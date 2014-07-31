@@ -37,45 +37,79 @@ import org.pinto.intercoding.intermediate.TypeFieldNameResolution
 import java.text.SimpleDateFormat
 
 @Log4j2
-class CodeConversion {
+class InterCoding {
+    static final String InterCodingHeader = "InterCoding 1.0 | Java -> Python Translator..."
     AdapterModel adapter
     NamespaceModel currentNamespace
 
-    private void logging() {
+    private void logging(String message = "") {
+        print message
         println new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime())
     }
 
     def processObject(String path) {
-        logging()
-        currentNamespace.copyInto(_read(path))
+        try {
+            logging("Starting adding object '$path' ... ")
+            currentNamespace.copyInto(_read(path))
+        } catch (Exception e) {
+            exit(e, "ERROR: Joining object has failed!\nAre you sure them are compiled for this version?")
+        }
     }
 
     def processPath(String path) {
-        logging()
-        adapter.process(path)
-        currentNamespace = adapter.coreNamespace
+        try {
+            logging("Starting processing '$path' ... ")
+            adapter.process(path)
+            currentNamespace = adapter.coreNamespace
+        } catch (Exception e) {
+            exit(e, "ERROR: Processing paths has failed!")
+        }
+    }
+
+    private void exit(Exception e, String message) {
+        Writer result = new StringWriter()
+        e.printStackTrace(new PrintWriter(result))
+        log.error result.toString()
+        println message
+        System.exit(-1)
     }
 
     def syntacticProcessing() {
-        logging()
-        def postProcessing = new PythonCodeProcessing()
-        postProcessing.process(currentNamespace)
+        try {
+            logging("Starting adaptions on syntax ... ")
+            def postProcessing = new PythonCodeProcessing()
+            postProcessing.process(currentNamespace)
+        } catch (Exception e) {
+            exit(e, "ERROR: Syntactic processing has failed!")
+        }
     }
 
     def semanticProcessing() {
-        logging()
-        def nameResolution = new TypeFieldNameResolution(coreNamespace: currentNamespace)
-        nameResolution.process(currentNamespace)
+        try {
+            logging("Starting semantic adaptions on code ... ")
+            def nameResolution = new TypeFieldNameResolution(coreNamespace: currentNamespace)
+            nameResolution.process(currentNamespace)
+        } catch (Exception e) {
+            exit(e, "ERROR: Semantic processing has failed!")
+        }
     }
 
     def format(FormatterModel formatter) {
-        logging()
-        formatter.coreNamespace = currentNamespace
-        formatter.format()
+        try {
+            logging("Starting formatting with ${formatter.class.name} ... ")
+            formatter.coreNamespace = currentNamespace
+            formatter.format()
+        } catch (Exception e) {
+            exit(e, "ERROR: Formatting code has failed!")
+        }
     }
 
     void save(String path) {
-        _save(currentNamespace, path)
+        try {
+            _save(currentNamespace, path)
+        } catch (Exception e) {
+            exit(e, "ERROR: Storing code object has failed!")
+        }
     }
 
     private void _save(NamespaceModel namespace, String path) {
@@ -89,7 +123,11 @@ class CodeConversion {
     }
 
     void read(String path) {
-        currentNamespace = _read(path)
+        try {
+            currentNamespace = _read(path)
+        } catch (Exception e) {
+            exit(e, "ERROR: Reading code object has failed!")
+        }
     }
 
     private NamespaceModel _read(String path) {
@@ -148,8 +186,13 @@ class ConsoleInputInterface {
     }
 
     def run(String[] arguments) {
+        showHeader()
         prepare(arguments)
         executeCommands()
+    }
+
+    private void showHeader(){
+        println InterCoding.InterCodingHeader
     }
 
     private def prepare(String[] arguments) {
@@ -175,7 +218,7 @@ class ConsoleInputInterface {
         FormatterModel formatter = selectFormatter()
         AdapterModel adapter = selectAdapter()
         new File(consoleArguments.outputDirectory).mkdirs()
-        def converter = new CodeConversion()
+        def converter = new InterCoding()
         converter.adapter = adapter
         for (path in consoleArguments.paths) {
             converter.processPath(path)
