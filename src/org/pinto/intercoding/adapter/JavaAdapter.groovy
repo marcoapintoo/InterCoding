@@ -461,7 +461,7 @@ class JavaVisitor extends GenericVisitorAdapter<Object, JavaAdapterInfo> {
                 documentation: (CommentModel) n.comment?.accept(this, arg),
                 defaultValue: new ObjectCreationModel(
                         type: type,
-                        arguments: n.args?:[]
+                        arguments: n.args?.collect {it?.accept(this, arg)}?:[]
                 )
         )
         arg.workingType.elements.add(value)

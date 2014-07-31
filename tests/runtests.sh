@@ -23,16 +23,16 @@ function runtest(){
 	echo =============================================================================
 	echo; echo;
 }
-runtest Test01.java
-runtest Test02.java
-runtest Test03.java
-runtest Test04.java
-runtest Test05.java
-runtest Test06.java
-runtest Test07.java
-runtest Test08.java
-runtest Test09.java
-#runtest Test10.java
+#runtest Test01.java
+#runtest Test02.java
+#runtest Test03.java
+#runtest Test04.java
+#runtest Test05.java
+#runtest Test06.java
+#runtest Test07.java
+#runtest Test08.java
+#runtest Test09.java
+runtest Test10.java
 #runtest Test11.java
 #runtest Test12.java
 #runtest Test13.java

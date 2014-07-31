@@ -64,7 +64,8 @@ class SwitchToWhileConversion {
                 statements: [assignCondition(varname, model.condition)]
         )
         def whileStmt = new WhileModel(
-                condition: new NameModel(name: varname),
+                //condition: new NameModel(name: varname),
+                condition: LiteralModel.True.copy(),
                 action: null
         )
         blockStmt.statements.add(whileStmt)
@@ -100,7 +101,7 @@ class SwitchToWhileConversion {
     protected def endOfCaseStatement(BlockModel trueBlock, name, nextSwitchCase) {
         def length = trueBlock.statements.size()
         if (length > 0 && trueBlock.statements[length - 1] instanceof BreakModel) {
-            trueBlock.statements = length > 1 ? trueBlock.statements[0..-2] : []
+            //trueBlock.statements = length > 1 ? trueBlock.statements[0..-2] : []
         } else if (nextSwitchCase != null) {
             trueBlock.statements.add(assignCondition(name, nextSwitchCase.label))
         }
@@ -117,8 +118,12 @@ class SwitchToWhileConversion {
         }
         trueBlock = (trueBlock as BlockModel)
         endOfCaseStatement trueBlock, name, nextSwitchCase
-        if (switchCase.label == null) {
+        //if (switchCase.label == null || nextSwitchCase==null) {
+        if (switchCase.defaultCase) {
             lastIf.falseAction = trueBlock
+            if(!(trueBlock.statements[-1] instanceof BreakModel)){
+                trueBlock.statements.add(new BreakModel())
+            }
             return lastIf
         }
         def ifStatement = new IfModel(
@@ -128,6 +133,9 @@ class SwitchToWhileConversion {
         )
         if (lastIf != null) {
             lastIf.falseAction = ifStatement
+        }
+        if(nextSwitchCase==null && !switchCase.defaultCase){
+            ifStatement.falseAction = new BreakModel()
         }
         return ifStatement
     }

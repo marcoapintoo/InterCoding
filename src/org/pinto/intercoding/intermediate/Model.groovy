@@ -659,8 +659,9 @@ class CaseSwitchModel extends StatementModel {
 
     void setAction(StatementModel value) { this.action = defaultCommonValue((StatementModel) value, "action") }
     ExpressionModel label
+    boolean defaultCase=false
 
-    void setLabel(ExpressionModel value) { this.label = defaultCommonValue((ExpressionModel) value, "label") }
+    void setLabel(ExpressionModel value) { this.defaultCase = value==null; this.label = defaultCommonValue((ExpressionModel) value, "label") }
 }
 
 //! @CompileStatic 

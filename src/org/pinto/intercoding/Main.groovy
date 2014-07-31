@@ -198,7 +198,8 @@ class ConsoleInputInterface {
     private def prepare(String[] arguments) {
         if (arguments.length == 0) {
             //arguments = ["."].toArray()
-            arguments = ["/home/marco/Projects/InterCoding/tests/Test05.java"].toArray()
+            //arguments = ["/home/marco/Projects/InterCoding/tests/Test05.java"].toArray()
+            arguments = ["/home/marco/Projects/InterCoding-ClassPath/gnu-classpath--preready/javax/tools/JavaFileObject.java"].toArray()
         }
         commander.parse(arguments)
         if (consoleArguments.javaAdapter) {

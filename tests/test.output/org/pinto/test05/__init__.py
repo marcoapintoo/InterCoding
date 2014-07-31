@@ -46,7 +46,8 @@ class Test05(java.lang.Object):
 		i = 0
 		j = None
 		i += 1
-		if (j = i) == 0:
+		j = i
+		if (j) == 0:
 			System.out.println("Counter is zero")
 		else:
 			System.out.println("Counter is not zero")
@@ -56,26 +57,30 @@ class Test05(java.lang.Object):
 		i = 0
 		j = None
 		i += 1
-		inc1 = i
-		while (j = inc1) <= limit:
+		inc5 = i
+		j = inc5
+		while (j) <= limit:
 			System.out.println("Counter = " + i)
 			i += 1
+			i += 1
+			inc6 = i
+			j = inc6
 	
 	@multimethod(limit = java.lang.Long)
 	def testingWhile2(self, limit):
 		i = 0
 		i += 1
-		inc2 = i
-		while inc2 <= limit:
+		inc1 = i
+		while inc1 <= limit:
 			System.out.println("Counter = " + i)
 			i += 1
 	
 	@multimethod(limit = java.lang.Long)
 	def testingWhile3(self, limit):
 		i = 0
-		inc3 = i
+		inc2 = i
 		i += 1
-		while inc3 <= limit:
+		while inc2 <= limit:
 			System.out.println("Counter = " + i)
 			i += 1
 	
@@ -84,19 +89,29 @@ class Test05(java.lang.Object):
 		i = 0
 		j = None
 		i += 1
-		inc4 = i
-		while (j = inc4) <= limit:
+		inc7 = i
+		j = inc7
+		while (j) <= limit:
 			System.out.println("Counter = " + i)
 			i += 1
+			i += 1
+			inc3 = i
+			j = inc3
 	
 	@multimethod(limit = java.lang.Long)
 	def testingDoWhile2(self, limit):
 		i = 0
 		j = None
+		System.out.println("Counter = " + i)
 		i += 1
-		inc5 = i
-		while (j = inc5) <= limit:
+		i += 1
+		inc4 = i
+		j = inc4
+		while (j) <= limit:
 			System.out.println("Counter = " + i)
 			i += 1
+			i += 1
+			inc4 = i
+			j = inc4
 
 Test05.__class_init__()
