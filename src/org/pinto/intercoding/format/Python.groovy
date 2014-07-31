@@ -573,6 +573,12 @@ class PythonFormat extends GenericModelVisitor<PythonFormatOption, String> imple
                 value = val
             }
             //println node.value.toString() + " <---> " + value.toString()
+        }else if(node.value instanceof Boolean) {
+            if((node.value as Boolean).booleanValue()){
+                value = "True"
+            }else{
+                value = "False"
+            }
         }else {
             value = (node.value ?: "None").toString()
         }
